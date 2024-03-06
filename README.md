@@ -7,6 +7,7 @@ Esta API fornece informações sobre os indicados e vencedores da categoria Pior
   ./git clone https://github.com/danielortegaalves/raspberry-awards.git
   
   Navegue até o diretório do projeto: cd nome-do-repositorio
+
   Entre na branch 'master': ./git checkout master
 
 # 2 - Como Testar
