@@ -20,13 +20,13 @@ Esta API fornece informações sobre os indicados e vencedores da categoria Pior
     
    # Executando a aplicação
     Navegue até o diretório do projeto: cd nome-do-repositorio
-    Execute a aplicação: ./mvnw spring-boot:run
+    Execute a aplicação: ./mvn spring-boot:run
     Volte ao postman, selecione a requisição desejada no painel esquerdo.
     Clique no botão "Send" para executar a requisição.
 
   # 2.2 - Via teste de integração:
     Navegue até o diretório do projeto: cd nome-do-repositorio
-    Execute os testes da aplicação: ./mvnw test
+    Execute os testes da aplicação: ./mvn test
 
 # 3 - Acessar o Banco de Dados via Browser
 Com a aplicação rodando, é possível acessar a base de dados em memória: 
