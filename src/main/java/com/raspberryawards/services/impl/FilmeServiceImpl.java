@@ -24,11 +24,28 @@ public class FilmeServiceImpl implements FilmeService {
 	@Autowired
 	private FilmeRepository filmeRepository;
 
-	public List<FilmeModel> obtemTodosFilmesPorProdutor() {
-		List<FilmeModel> todosFilmes = getAll();
+	public Map<String, List<Map<String, Object>>> obtemIntervalosPremios() {
+		List<FilmeModel> filmesPorProdutor = obtemTodosFilmesPorProdutor();
 
-		// Cria os filmes para cada produtor que estão separados por ',' ou 'and'
-		return todosFilmes.stream().flatMap(filme -> expandirFilmesPorProdutor(filme).stream()).collect(Collectors.toList());
+		// Agrupar filmes por produtor
+		Map<String, List<FilmeModel>> filmesAgrupados = agruparFilmesPorProdutor(filmesPorProdutor);
+
+		Map<String, List<Map<String, Object>>> result = new HashMap<>();
+		result.put("min", obtemProdutorComMenorIntervaloProducao(filmesAgrupados));
+		result.put("max", obtemProdutorComMaiorIntervaloProducao(filmesAgrupados));
+
+		return result;
+	}
+
+	public List<FilmeModel> obtemTodosFilmesPorProdutor() {
+		// Obtem os filmes vencedores
+		List<FilmeModel> todosFilmes = getAll().stream().filter(filme -> Boolean.TRUE.equals(filme.getVencedor()))
+				.collect(Collectors.toList());
+
+		// Expande os filmes cencedores para cada produtor que estão separados por ','
+		// ou 'and'
+		return todosFilmes.stream().flatMap(filme -> expandirFilmesPorProdutor(filme).stream())
+				.collect(Collectors.toList());
 	}
 
 	private List<FilmeModel> expandirFilmesPorProdutor(FilmeModel filme) {
@@ -49,21 +66,18 @@ public class FilmeServiceImpl implements FilmeService {
 		}).collect(Collectors.toList());
 	}
 
-	@SuppressWarnings("unchecked")
 	private List<Map<String, Object>> obtemProdutorComMaiorIntervaloProducao(Map<String, List<FilmeModel>> filmes) {
 		List<Map<String, Object>> result = new ArrayList<>();
 
+		Integer maiorIntervalo = null;
+		Map<String, Object> maiorIntervalolMap = null;
+
 		for (String produtor : filmes.keySet()) {
 
-			// Pega a lista de filmes do produtor, e ordena pelo ano de lançamento.
-			List<FilmeModel> filmesDoProdutor = filmes.get(produtor).stream()
-					.sorted(Comparator.comparingInt(FilmeModel::getAnoLancamento)).collect(Collectors.toList());
+			// Pega a lista de filmes do produtor
+			List<FilmeModel> filmesDoProdutor = filmes.get(produtor).stream().collect(Collectors.toList());
 
-			Integer menorIntervalo = null;
-			Map<String, Object> menorIntervalolMap = null;
-
-			// Percorre os filmes ordenados pelo ano de lançamento pra encontrar o maior
-			// intervalo.
+			// Percorre os filmes pra encontrar o maior intervalo.
 			for (int i = 0; i < filmesDoProdutor.size() - 1; i++) {
 
 				int intervalo = filmesDoProdutor.get(i + 1).getAnoLancamento()
@@ -72,38 +86,35 @@ public class FilmeServiceImpl implements FilmeService {
 				if (intervalo == 0)
 					continue;
 
-				if (null == menorIntervalo || intervalo < menorIntervalo) {
-					menorIntervalo = intervalo;
-					menorIntervalolMap = obtemMapaIntervaloProdutor(produtor, intervalo, filmesDoProdutor.get(i),
+				if (null == maiorIntervalo || intervalo >= maiorIntervalo) {
+					maiorIntervalo = intervalo;
+					maiorIntervalolMap = obtemMapaIntervaloProdutor(produtor, intervalo, filmesDoProdutor.get(i),
 							filmesDoProdutor.get(i + 1));
 				}
 			}
 
-			// Adiciona o mapa de intervalo do produtor no resultado
-			if (menorIntervalolMap != null) {
-				result.add(menorIntervalolMap);
-			}
 		}
 
-		result.sort(Comparator.comparingInt(map -> (int) ((Map<String, Object>) map).get("interval")).reversed());
+		// Adiciona o mapa de intervalo do produtor no resultado
+		if (maiorIntervalolMap != null) {
+			result.add(maiorIntervalolMap);
+		}
+
 		return result;
 	}
 
-	@SuppressWarnings("unchecked")
 	private List<Map<String, Object>> obtemProdutorComMenorIntervaloProducao(Map<String, List<FilmeModel>> filmes) {
 		List<Map<String, Object>> result = new ArrayList<>();
 
+		Integer menorIntervalo = null;
+		Map<String, Object> menorIntervalolMap = null;
+
 		for (String produtor : filmes.keySet()) {
 
-			// Pega a lista de filmes do produtor, e ordena pelo ano de lançamento.
-			List<FilmeModel> filmesDoProdutor = filmes.get(produtor).stream()
-					.sorted(Comparator.comparingInt(FilmeModel::getAnoLancamento)).collect(Collectors.toList());
+			// Pega a lista de filmes do produtor
+			List<FilmeModel> filmesDoProdutor = filmes.get(produtor).stream().collect(Collectors.toList());
 
-			Integer menorIntervalo = null;
-			Map<String, Object> menorIntervalolMap = null;
-
-			// Percorre os filmes ordenados pelo ano de lançamento pra encontrar o maior
-			// intervalo.
+			// Percorre os filmes pra encontrar o maior intervalo.
 			for (int i = 0; i < filmesDoProdutor.size() - 1; i++) {
 
 				int intervalo = filmesDoProdutor.get(i + 1).getAnoLancamento()
@@ -118,14 +129,13 @@ public class FilmeServiceImpl implements FilmeService {
 							filmesDoProdutor.get(i + 1));
 				}
 			}
-
-			// Adiciona o mapa de intervalo do produtor no resultado
-			if (menorIntervalolMap != null) {
-				result.add(menorIntervalolMap);
-			}
 		}
 
-		result.sort(Comparator.comparingInt(map -> (int) ((Map<String, Object>) map).get("interval")));
+		// Adiciona o mapa de intervalo do produtor no resultado
+		if (menorIntervalolMap != null) {
+			result.add(menorIntervalolMap);
+		}
+
 		return result;
 	}
 
@@ -139,25 +149,12 @@ public class FilmeServiceImpl implements FilmeService {
 		return intervalMap;
 	}
 
-	public Map<String, List<Map<String, Object>>> obtemIntervalosPremios() {
-		List<FilmeModel> filmesPorProdutor = obtemTodosFilmesPorProdutor();
-
-		// Agrupar filmes por produtor
-		Map<String, List<FilmeModel>> filmesAgrupados = agruparFilmesPorProdutor(filmesPorProdutor);
-
-		Map<String, List<Map<String, Object>>> result = new HashMap<>();
-		result.put("min", obtemProdutorComMenorIntervaloProducao(filmesAgrupados));
-		result.put("max", obtemProdutorComMaiorIntervaloProducao(filmesAgrupados));
-
-		return result;
-	}
-
 	// O uso do TreeMap para ser ordenado pelas chaves (nomes dos produtores)
 	private Map<String, List<FilmeModel>> agruparFilmesPorProdutor(List<FilmeModel> filmes) {
 		return filmes.stream().collect(Collectors.groupingBy(FilmeModel::getProdutor,
 				TreeMap<String, List<FilmeModel>>::new, Collectors.toList()));
 	}
-	
+
 	@Override
 	public FilmeModel save(FilmeModel filmeModel) {
 		return filmeRepository.save(filmeModel);

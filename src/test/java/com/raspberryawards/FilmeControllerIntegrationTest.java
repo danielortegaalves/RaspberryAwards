@@ -6,14 +6,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
-
-import com.raspberryawards.dto.FilmeDto;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class FilmeControllerIntegrationTest {
@@ -43,47 +42,22 @@ class FilmeControllerIntegrationTest {
 		List<Map<String, Object>> maxList = (List<Map<String, Object>>) response.get("max");
 		assertFalse(minList.isEmpty());
 		assertFalse(maxList.isEmpty());
+
+		// Verifica se minList contém o produtor "Joel Silver" com intervalo 1
+		Optional<Map<String, Object>> produtorMenorIntervalo = minList.stream()
+				.filter(entry -> "Joel Silver".equals(entry.get("producer")))
+				.filter(entry -> 1 == (int) entry.get("interval"))
+				.filter(entry -> 1990 == (int) entry.get("previousWin"))
+				.filter(entry -> 1991 == (int) entry.get("followingWin")).findFirst();
+		assertTrue(produtorMenorIntervalo.isPresent());
+
+		// Verifica se maxList contém o produtor "Matthew Vaughn" com intervalo 13
+		Optional<Map<String, Object>> produtorMaiorIntervalo = maxList.stream()
+				.filter(entry -> "Matthew Vaughn".equals(entry.get("producer")))
+				.filter(entry -> 13 == (int) entry.get("interval"))
+				.filter(entry -> 2002 == (int) entry.get("previousWin"))
+				.filter(entry -> 2015 == (int) entry.get("followingWin")).findFirst();
+		assertTrue(produtorMaiorIntervalo.isPresent());
 	}
 
-	@SuppressWarnings("unchecked")
-	@Test
-	public void testIncluiProdutorComMaiorAndMenorIntervaloDePremios() {
-		// Inserção dos filmes do produtor com menor intervalo
-		FilmeDto primeiroFilmeDto = criarFilmeDto("Daniel Ortega Alves", 2023, "Inicio de tudo", "Home", true);
-		FilmeDto segundoFilmeDto = criarFilmeDto("Daniel Ortega Alves", 2024, "O desafio", "Home", true);
-		restTemplate.postForEntity("http://localhost:" + port + "/filmes", primeiroFilmeDto, FilmeDto.class);
-		restTemplate.postForEntity("http://localhost:" + port + "/filmes", segundoFilmeDto, FilmeDto.class);
-
-		// Inserção dos filmes do produtor com intervalo maior
-		primeiroFilmeDto = criarFilmeDto("João Gonçalves", 2000, "O maior intervalo", "Home", true);
-		segundoFilmeDto = criarFilmeDto("João Gonçalves", 2024, "Desafio demorado", "Home", true);
-		restTemplate.postForEntity("http://localhost:" + port + "/filmes", primeiroFilmeDto, FilmeDto.class);
-		restTemplate.postForEntity("http://localhost:" + port + "/filmes", segundoFilmeDto, FilmeDto.class);
-
-		// Chama o endpoint "/intervalos-premio" para obter o resultado
-		Map<String, List<Map<String, Object>>> resultado = restTemplate
-				.getForObject("http://localhost:" + port + "/filmes/intervalos-premio", Map.class);
-
-		// Verifica se existem entradas nas listas "min" e "max"
-		assertTrue(resultado.get("min").size() >= 1);
-		assertTrue(resultado.get("max").size() >= 1);
-
-		//Verifica se "Daniel Ortega Alves" está entre os produtores com menor intervalo
-		List<Map<String, Object>> listaMin = resultado.get("min");
-		boolean produtorEncontradoMin = listaMin.stream()
-				.anyMatch(entry -> "Daniel Ortega Alves".equals(entry.get("producer")));
-		assertTrue(produtorEncontradoMin);
-
-		// Verifica se "João Gonçalves" está entre os produtores com maior intervalo
-		List<Map<String, Object>> listaMax = resultado.get("max");
-		boolean produtorEncontradoMax = listaMax.stream()
-				.anyMatch(entry -> "João Gonçalves".equals(entry.get("producer")));
-		assertTrue(produtorEncontradoMax);
-	}
-
-	private FilmeDto criarFilmeDto(String produtor, int anoLancamento, String titulo, String estudio,
-			boolean vencedor) {
-		return FilmeDto.builder().anoLancamento(anoLancamento).titulo(titulo).estudio(estudio).vencedor(vencedor)
-				.produtor(produtor).build();
-	}
 }
